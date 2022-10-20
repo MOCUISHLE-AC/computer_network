@@ -50,7 +50,7 @@ int  main()
 	cout << buf << endl;
 	// 创建线程，并且传入与client通讯的套接字
 	HANDLE hThread = CreateThread(NULL, 0, recvMsgThread, (LPVOID)s, 0, NULL);
-	//3随时给服务端发消息
+	//随时给服务端发消息
 	int  ret = 0;
 	while (true)
 	{

@@ -25,7 +25,7 @@ DWORD WINAPI WacthThread(LPVOID lpThreadParameter) {
 			else {
 				cout << "聊天室人数：" << total << endl;
 				for (int i = 0; i < total; i++) {
-					cout << cliname[i] <<"socket:"<< cliSock[i]<<endl;
+					cout << cliname[i] <<"\tsocket:"<< cliSock[i]<<endl;
 				}
 				cout << endl;
 			}
@@ -42,7 +42,7 @@ int main()
 		return 0;
 	}
 
-	// 1. 创建流式套接字
+	//创建流式套接字
 	SOCKET server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (server_socket == INVALID_SOCKET)
 	{
@@ -50,7 +50,7 @@ int main()
 		return 0;
 	}
 
-	// 2. 绑定端口和ip
+	//绑定端口和ip
 	sockaddr_in addr;
 	memset(&addr, 0, sizeof(sockaddr_in));
 	addr.sin_family = AF_INET;
@@ -66,22 +66,24 @@ int main()
 		return 0;
 	}
 	cout << "server建立成功" << endl << endl;
-	// 3. 监听
+	//监听
 	listen(server_socket, max_num);
+
+	//命令行线程
 	HANDLE Recv_thread = CreateThread(NULL, 0, WacthThread, (LPVOID)server_socket, 0, NULL);
 	// 主线程循环接收客户端的连接
 	while (true)
 	{
 		sockaddr_in addrClient;
 		len = sizeof(sockaddr_in);
-		// 4.接受成功返回与client通讯的Socket
-		SOCKET c = accept(server_socket, (SOCKADDR*)&addrClient, &len);
-		if (c != INVALID_SOCKET)
+		// 接受成功返回与client通讯的Socket
+		SOCKET accept_socket = accept(server_socket, (SOCKADDR*)&addrClient, &len);
+		if (accept_socket != INVALID_SOCKET)
 		{
-			cliSock[total] = c;
+			cliSock[total] = accept_socket;
 			cliAddr[total] = addrClient;
 			// 创建线程，并且传入与client通讯的套接字
-			HANDLE Recv_thread = CreateThread(NULL, 0, ThreadFun, (LPVOID)c, 0, NULL);
+			HANDLE Recv_thread = CreateThread(NULL, 0, ThreadFun, (LPVOID)accept_socket, 0, NULL);
 			CloseHandle(Recv_thread); // 关闭对线程的引用
 		}
 	}
@@ -97,8 +99,8 @@ int main()
 
 DWORD WINAPI ThreadFun(LPVOID lpThreadParameter)
 {
-	// 5.与客户端通讯，发送或者接受数据
-	total++;
+	//与客户端通讯，发送或者接受数据
+	total++;  
 	SOCKET c = (SOCKET)lpThreadParameter;
 	char temp[20];
 	recv(c, temp, 20, 0);
@@ -155,7 +157,14 @@ DWORD WINAPI ThreadFun(LPVOID lpThreadParameter)
 			}
 		}
 	} while (ret != SOCKET_ERROR && ret != 0);
-
+	//某些Client线程推出后，需要重新定位
+	index = -1;
+	for (int i = 0; i < total; i++) {
+		if (c == cliSock[i]) {
+			index = i;
+			break;
+		}
+	}
 	//退出线程前，将Client数组向前移动
 	for (int i = index; i < total; i++) {
 		cliSock[i] = cliSock[i + 1];
