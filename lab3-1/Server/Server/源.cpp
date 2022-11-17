@@ -65,7 +65,7 @@ int Treetimes_Shake(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLe
         //SYN==1,并且校验和正确
         //所有的16位的数相加，如果低16位全为1，则没有出错。
         if (header.flag == SYN && checksum((u_short*)&header, sizeof(header)) == 0) {
-            cout << "Server接受到Client的第一次握手：SYN=1" << endl;
+            cout << "Server接受Client的第一次握手：SYN=1" << endl;
             break;
         }
     }
@@ -80,6 +80,8 @@ int Treetimes_Shake(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLe
     {
         return -1;//发送SYN、ACK失效
     }
+    else
+        cout << "Server发送Client的第二次握手：SYN=1 ACK=1"<<endl;
     clock_t start = clock();//记录时间
 
     while (recvfrom(sockServ, buffer, sizeof(header), 0, (sockaddr*)&ClientAddr, &ClientAddrLen) <= 0)
@@ -102,7 +104,7 @@ int Treetimes_Shake(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLe
     HEADER lastshake;
     memcpy(&lastshake, buffer, sizeof(lastshake));
     if (lastshake.flag = ACK && checksum((u_short*)&lastshake, sizeof(lastshake)) == 0) {
-        cout << "成功建立连接，可以接收数据" << endl;
+        cout << "Server接收Client的第三次握手：ACK=1" << endl;
     }
     else
     {
@@ -198,7 +200,7 @@ int Fourtimes_Wave(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLen
         memcpy(&header, Buffer, sizeof(header));
         if (header.flag == FIN && checksum((u_short*)&header, sizeof(header)) == 0)
         {
-            cout << "成功接收第一次挥手信息" << endl;
+            cout << "Server接收Client第一次挥手: " <<"FIN=1"<<endl;
             break;
         }
     }
@@ -213,7 +215,7 @@ int Fourtimes_Wave(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLen
         return -1;
     }
     else {
-        cout << "成功发送第二次挥手信息" << endl;
+        cout << "Server发送Client第二次挥手: "<<"ACK=1"<< endl;
     }
 
     //发送第三次挥手信息
@@ -227,7 +229,7 @@ int Fourtimes_Wave(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLen
         return -1;
     }
     else
-        cout << "成功发送第三次挥手" << endl;
+        cout << "Server发送Client第三次挥手: " <<"FIN=1 ACK=1"<<endl;
     clock_t start = clock();
     while (recvfrom(sockServ, Buffer, sizeof(header), 0, (sockaddr*)&ClientAddr, &ClientAddrLen) <= 0)
     {
@@ -252,7 +254,7 @@ int Fourtimes_Wave(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLen
     memcpy(&last, Buffer, sizeof(header));
     if (last.flag == ACK && checksum((u_short*)&last, sizeof(last) == 0))
     {
-        cout << "成功接收第四次挥手信息" << endl;
+        cout << "Server接收Client第四次挥手: " <<"ACK=1" <<endl;
     }
     else
     {
@@ -280,23 +282,45 @@ int main() {
     //建立连接，三次握手
     Treetimes_Shake(server, server_addr, len);
     
-    char* name = new char[20];
-    char* data = new char[100000000];
-    int namelen = RecvMessage(server, server_addr, len, name);
-    int datalen = RecvMessage(server, server_addr, len, data);
+    while (true) {
+        char* name = new char[20];
+        char* data = new char[100000000];
+        int namelen = RecvMessage(server, server_addr, len, name);
+        //memcpy与strcpy不同，所以使用strcmp会出错
+        string a;
+        for (int i = 0; i < namelen; i++)
+        {
+            a = a + name[i];
+        }
+        ofstream fout(a.c_str(), ofstream::binary);
+        if (strcmp(a.c_str(), "quit") == 0)
+            break;
+        while (true) {
+            int datalen = RecvMessage(server, server_addr, len, data);
+            cout << datalen;
+            for (int i = 0; i < datalen; i++)
+            {
+                fout << data[i];
+            }
+            cout << "文件已成功下载到本地" << endl;
+            memset(data, '\0', sizeof(data));
 
-    string a;
-    for (int i = 0; i < namelen; i++)
-    {
-        a = a + name[i];
+            datalen = RecvMessage(server, server_addr, len, data);
+            string a;
+            for (int i = 0; i < datalen; i++)
+            {
+                a = a + data[i];
+            }
+            if (strcmp(a.c_str(), "Finished") == 0) {
+                cout << "报文分组已经结束" << endl;
+                break;
+            }
+            memset(data, '\0', sizeof(data));
+        }
+        fout.close();
+        delete[] name;
+        delete[] data;
     }
     Fourtimes_Wave(server, server_addr, len);
-    ofstream fout(a.c_str(), ofstream::binary);
-    for (int i = 0; i < datalen; i++)
-    {
-        fout << data[i];
-    }
-    fout.close();
-    cout << "文件已成功下载到本地" << endl;
     system("pause");
 }

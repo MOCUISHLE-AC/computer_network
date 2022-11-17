@@ -1,5 +1,5 @@
 ﻿  源.cpp
 E:\computer_network\computer_network\lab3-1\Client\Client\源.cpp(62,13): warning C4101: “sum”: 未引用的局部变量
-E:\computer_network\computer_network\lab3-1\Client\Client\源.cpp(240,13): warning C4101: “sum”: 未引用的局部变量
-E:\computer_network\computer_network\lab3-1\Client\Client\源.cpp(316): warning C4715: “disConnect”: 不是所有的控件路径都返回值
+E:\computer_network\computer_network\lab3-1\Client\Client\源.cpp(241,13): warning C4101: “sum”: 未引用的局部变量
+E:\computer_network\computer_network\lab3-1\Client\Client\源.cpp(318): warning C4715: “Fourtimes_Wave”: 不是所有的控件路径都返回值
   Client.vcxproj -> E:\computer_network\computer_network\lab3-1\Client\Debug\Client.exe
