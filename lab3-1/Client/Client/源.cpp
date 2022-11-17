@@ -3,6 +3,7 @@
 #include <time.h>
 #include <fstream>
 #pragma comment(lib, "ws2_32.lib")
+#define MAX_DIV_MESSAGE  10000000
 using namespace std;
 
 const int MAXSIZE = 1024;//传输缓冲区最大长度
@@ -354,25 +355,23 @@ int main()
 
         ifstream fin(filename.c_str(), ifstream::binary);//以二进制方式打开文件
         cout << filename.c_str() << endl;
-        char* buffer = new char[100000000];
+        char* buffer = new char[MAX_DIV_MESSAGE];
         int index = 0;
         long long size = 0;
         unsigned char temp = fin.get();
         while (fin)
         {
-            if (index % 100 == 0)
-                cout << index << endl;
             buffer[index++] = temp;
             size++;
             temp = fin.get();
-            if (index == strlen(buffer)) {
+            if (index == MAX_DIV_MESSAGE) {
                 start = clock();
                 //标记
                 send(server, server_addr, len, buffer, index);
                 char divide_flag[20] = "Notfinished";
                 send(server, server_addr, len, divide_flag, strlen(divide_flag));
                 index = 0;
-                memset(buffer, '\0', sizeof(buffer));
+                memset(buffer, '\0', strlen(buffer));
             }
         }
         cout << "进入最后一组" << endl;
