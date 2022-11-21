@@ -3,15 +3,16 @@
 #include <time.h>
 #include <fstream>
 #pragma comment(lib, "ws2_32.lib")
+#define MAX_DIV_MESSAGE  10000000 //文件一次性读取的最大size
 using namespace std;
 
-const int MAXSIZE = 1024;//传输缓冲区最大长度
-const unsigned char SYN = 0x1; //SYN = 1 ACK = 0
-const unsigned char ACK = 0x2;//SYN = 0, ACK = 1
-const unsigned char ACK_SYN = 0x3;//SYN = 1, ACK = 1
-const unsigned char FIN = 0x4;//FIN = 1 ACK = 0
-const unsigned char FIN_ACK = 0x5;//FIN = 1 ACK = 0
-const unsigned char OVER = 0x7;//结束标志
+const int MAXSIZE = 1024;           //单个报文最大长度
+const unsigned char SYN = 0x1;      //SYN = 1 ACK = 0
+const unsigned char ACK = 0x2;      //SYN = 0, ACK = 1
+const unsigned char ACK_SYN = 0x3;  //SYN = 1, ACK = 1
+const unsigned char FIN = 0x4;      //FIN = 1 ACK = 0
+const unsigned char FIN_ACK = 0x5;  //FIN = 1 ACK = 0
+const unsigned char OVER = 0x7;     //结束标志
 double MAX_TIME = 0.5 * CLOCKS_PER_SEC;
 //UDP头
 struct HEADER
@@ -130,7 +131,7 @@ int RecvMessage(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLen, c
             cout << "文件接收完毕" << endl;
             break;
         }
-        if (header.flag == unsigned char(0) && checksum((u_short*)buffer, length - sizeof(header))) {
+        if (header.flag == unsigned char(0) && checksum((u_short*)buffer, length)==0) {
 
             //判断是否是别的包
             if (seq != int(header.SEQ)) {
@@ -156,7 +157,6 @@ int RecvMessage(SOCKET& sockServ, SOCKADDR_IN& ClientAddr, int& ClientAddrLen, c
             cout << "Send message " << length - sizeof(header) << " bytes!Flag:" << int(header.flag) << " SEQ : " << int(header.SEQ) << " SUM:" << int(header.sum) << endl;
             char* temp = new char[length - sizeof(header)];
             memcpy(temp, buffer + sizeof(header), length - sizeof(header));
-            //cout << "size" << sizeof(message) << endl;
             memcpy(message + all, temp, length - sizeof(header));
             all = all + int(header.datasize);
 
@@ -268,11 +268,16 @@ int main() {
     WSAStartup(MAKEWORD(2, 2), &wsadata);
 
     SOCKADDR_IN server_addr;
+    SOCKADDR_IN router_addr;
     SOCKET server;
     //socket参数赋值
     server_addr.sin_family = AF_INET;//使用IPV4
     server_addr.sin_port = htons(1234);//端口
     server_addr.sin_addr.s_addr = htonl(2130706433);//地址
+
+    router_addr.sin_family = AF_INET;
+    router_addr.sin_port = htons(4002);
+    router_addr.sin_addr.s_addr = htonl(2130706434);// 127.0.0.2
 
     server = socket(AF_INET, SOCK_DGRAM, 0);
     bind(server, (SOCKADDR*)&server_addr, sizeof(server_addr));//bind绑定本机端口
@@ -280,12 +285,12 @@ int main() {
 
     int len = sizeof(server_addr);
     //建立连接，三次握手
-    Treetimes_Shake(server, server_addr, len);
+    Treetimes_Shake(server, router_addr, len);
     
     while (true) {
         char* name = new char[20];
-        char* data = new char[100000000];
-        int namelen = RecvMessage(server, server_addr, len, name);
+        char* data = new char[MAX_DIV_MESSAGE];
+        int namelen = RecvMessage(server, router_addr, len, name);
         //memcpy与strcpy不同，所以使用strcmp会出错
         string a;
         for (int i = 0; i < namelen; i++)
@@ -296,16 +301,16 @@ int main() {
         if (strcmp(a.c_str(), "quit") == 0)
             break;
         while (true) {
-            int datalen = RecvMessage(server, server_addr, len, data);
+            int datalen = RecvMessage(server, router_addr, len, data);
             cout << datalen;
             for (int i = 0; i < datalen; i++)
             {
                 fout << data[i];
             }
             cout << "文件已成功下载到本地" << endl;
-            memset(data, '\0', sizeof(data));
+            memset(data, '\0', MAX_DIV_MESSAGE);
 
-            datalen = RecvMessage(server, server_addr, len, data);
+            datalen = RecvMessage(server, router_addr, len, data);
             string a;
             for (int i = 0; i < datalen; i++)
             {
@@ -315,12 +320,12 @@ int main() {
                 cout << "报文分组已经结束" << endl;
                 break;
             }
-            memset(data, '\0', sizeof(data));
+            memset(data, '\0', MAX_DIV_MESSAGE);
         }
         fout.close();
         delete[] name;
         delete[] data;
     }
-    Fourtimes_Wave(server, server_addr, len);
+    Fourtimes_Wave(server, router_addr, len);
     system("pause");
 }

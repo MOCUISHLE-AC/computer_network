@@ -3,7 +3,7 @@
 #include <time.h>
 #include <fstream>
 #pragma comment(lib, "ws2_32.lib")
-#define MAX_DIV_MESSAGE  10000000
+#define MAX_DIV_MESSAGE  10000000 //文件一次性读取的最大size
 using namespace std;
 
 const int MAXSIZE = 1024;//传输缓冲区最大长度
@@ -16,12 +16,6 @@ const unsigned char OVER = 0x7;//结束标志
 double MAX_TIME = 0.5 * CLOCKS_PER_SEC;
 
 
-/*
-1.把伪首部添加到UDP上；
-2.计算初始时是需要将检验和字段添零的；
-3.把所有位划分为16位（2字节）的字
-4.把所有16位的字相加，如果遇到进位，则将高于16字节的进位部分的值加到最低位上，举例，0xBB5E+0xFCED=0x1 B84B，则将1放到最低位，得到结果是0xB84C
-5.将所有字相加得到的结果应该为一个16位的数，将该数取反则可以得到检验和checksum。 */
 u_short checksum(u_short* mes, int size) {
     int count = (size + 1) / 2;
     u_short* buf = (u_short*)malloc(size + 1);
@@ -72,6 +66,9 @@ int Treetimes_Shake(SOCKET& socketClient, SOCKADDR_IN& servAddr, int& servAddrle
     {
         return -1;
     }
+    else {
+        cout << "Client发送Server的第一次握手：SYN=1" << endl;
+    }
     clock_t start = clock(); //记录发送第一次握手时间
 
     u_long mode = 1;
@@ -97,7 +94,7 @@ int Treetimes_Shake(SOCKET& socketClient, SOCKADDR_IN& servAddr, int& servAddrle
     memcpy(&header, Buffer, sizeof(header));
     if (header.flag == ACK_SYN && checksum((u_short*)&header, sizeof(header) == 0))
     {
-        cout << "收到第二次握手信息" << endl;
+        cout << "Client接收Server的第二次握手: SYN=1 ACK=1" << endl;
     }
     else
     {
@@ -113,7 +110,7 @@ int Treetimes_Shake(SOCKET& socketClient, SOCKADDR_IN& servAddr, int& servAddrle
     {
         return -1;//判断客户端是否打开，-1为未开启发送失败
     }
-    cout << "服务器成功连接！可以发送数据" << endl;
+    cout << "Client发送Server的第三次握手: ACK=1" << endl;
     return 1;
 }
 
@@ -302,7 +299,6 @@ int Fourtimes_Wave(SOCKET& socketClient, SOCKADDR_IN& servAddr, int& servAddrlen
     }
 
     //发送第四次挥手
-    //进行第一次挥手
     header.flag = ACK;
     header.sum = 0;//校验和置0
     temp = checksum((u_short*)&header, sizeof(header));
@@ -325,16 +321,21 @@ int main()
     WSAStartup(MAKEWORD(2, 2), &wsadata);
 
     SOCKADDR_IN server_addr;
+    SOCKADDR_IN router_addr;
     SOCKET server;
 
     server_addr.sin_family = AF_INET;//使用IPV4
     server_addr.sin_port = htons(1234);
     server_addr.sin_addr.s_addr = htonl(2130706433);
 
+    router_addr.sin_family = AF_INET;
+    router_addr.sin_port = htons(4002);
+    router_addr.sin_addr.s_addr = htonl(2130706434);// 127.0.0.2
+
     server = socket(AF_INET, SOCK_DGRAM, 0);
     int len = sizeof(server_addr);
     //建立连接
-    if (Treetimes_Shake(server, server_addr, len) == -1)
+    if (Treetimes_Shake(server, router_addr, len) == -1)
     {
         return 0;
     }
@@ -346,7 +347,7 @@ int main()
         cin >> filename;
         if (strcmp(filename.c_str(), "quit")==0)
         {
-            send(server, server_addr, len, (char*)(filename.c_str()), filename.length());
+            send(server, router_addr, len, (char*)(filename.c_str()), filename.length());
             cout << "退出成功！！！" << endl;
             break;
         }
@@ -365,11 +366,15 @@ int main()
             size++;
             temp = fin.get();
             if (index == MAX_DIV_MESSAGE) {
-                start = clock();
+                if (start == 0)
+                {
+                    start = clock();
+                    start++;
+                }
                 //标记
-                send(server, server_addr, len, buffer, index);
+                send(server, router_addr, len, buffer, index);
                 char divide_flag[20] = "Notfinished";
-                send(server, server_addr, len, divide_flag, strlen(divide_flag));
+                send(server, router_addr, len, divide_flag, strlen(divide_flag));
                 index = 0;
                 memset(buffer, '\0', strlen(buffer));
             }
@@ -378,14 +383,14 @@ int main()
         fin.close();
         if (start == 0)
             start = clock();
-        send(server, server_addr, len, buffer, index);
+        send(server, router_addr, len, buffer, index);
         char divide_flag[20] = "Finished";
-        send(server, server_addr, len, divide_flag, strlen(divide_flag));
+        send(server, router_addr, len, divide_flag, strlen(divide_flag));
         end = clock();
 
         cout << "传输总时间为:" << (end - start) / CLOCKS_PER_SEC << "s" << endl;
         cout << "吞吐率为:" << ((float)size) / ((end - start) / CLOCKS_PER_SEC) << "byte/s" << endl;
         delete[] buffer;
     }
-    Fourtimes_Wave(server, server_addr, len);
+    Fourtimes_Wave(server, router_addr, len);
 }
