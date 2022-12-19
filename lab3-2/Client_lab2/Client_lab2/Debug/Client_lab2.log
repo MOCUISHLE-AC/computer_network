@@ -1,5 +1,4 @@
 ﻿  源.cpp
-E:\computer_network\computer_network\lab3-2\Client_lab2\Client_lab2\源.cpp(64,13): warning C4101: “sum”: 未引用的局部变量
-E:\computer_network\computer_network\lab3-2\Client_lab2\Client_lab2\源.cpp(283,13): warning C4101: “sum”: 未引用的局部变量
-E:\computer_network\computer_network\lab3-2\Client_lab2\Client_lab2\源.cpp(360): warning C4715: “Fourtimes_Wave”: 不是所有的控件路径都返回值
+E:\computer_network\computer_network\lab3-2\Client_lab2\Client_lab2\源.cpp(1,30): warning C4081: 应输入“newline”；找到“;”
+E:\computer_network\computer_network\lab3-2\Client_lab2\Client_lab2\源.cpp(64): warning C4715: “Treetimes_Shake”: 不是所有的控件路径都返回值
   Client_lab2.vcxproj -> E:\computer_network\computer_network\lab3-2\Client_lab2\Debug\Client_lab2.exe

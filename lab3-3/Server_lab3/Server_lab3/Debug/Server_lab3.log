@@ -1,0 +1,4 @@
+﻿  Server_lab3.cpp
+E:\computer_network\computer_network\lab3-3\Server_lab3\Server_lab3\Server_lab3.cpp(1,30): warning C4081: 应输入“newline”；找到“;”
+E:\computer_network\computer_network\lab3-3\Server_lab3\Server_lab3\Server_lab3.cpp(70): warning C4715: “Treetimes_Shake”: 不是所有的控件路径都返回值
+  Server_lab3.vcxproj -> E:\computer_network\computer_network\lab3-3\Server_lab3\Debug\Server_lab3.exe
